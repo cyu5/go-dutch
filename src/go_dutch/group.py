@@ -22,5 +22,10 @@ class Group:
         self.balances = dict()
 
         
-        
-    
+    # add a single member to the group
+    def add_member (self, member: str) -> None:
+
+        if isinstance(member, str):
+            self.members.add(member)
+        else:
+            raise TypeError('Single string argument required for input')
