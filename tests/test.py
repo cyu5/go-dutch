@@ -49,3 +49,31 @@ def test_add_member ():
         group1.add_member ()
     with pytest.raises(TypeError):
         group1.add_member ([member1])
+
+        
+def test_extend_members():
+    group = Group()
+    
+    with pytest.raises(TypeError):
+        group.extend_members(1)
+    with pytest.raises(TypeError):
+        group.extend_members([1, 1, 1])
+    with pytest.raises(TypeError):
+        group.extend_members([[]])
+    with pytest.raises(TypeError):
+        group.extend_members("a string")
+    with pytest.raises(TypeError):
+        group.extend_members(['joe','john',1])
+    assert len(group.members) == 0
+
+    # check empty members
+    group.extend_members([])
+    assert group.members.__len__() == 0
+
+    # all members unique
+    group.extend_members(["joe", "nick", "john"])
+    assert group.members.__len__() == 3
+
+    # check unique members
+    group.extend_members(["sarah", "sarah"])
+    assert group.members.__len__() == 4
