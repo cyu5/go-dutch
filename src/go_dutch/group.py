@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 # Group class
 class Group():
 
@@ -61,3 +59,16 @@ class Group():
 
     def get_balances (self) -> dict:
         return self.__balances
+
+    # remove a single member from the group only if the member is settled
+    def remove_settled_member (self, member: str) -> None:
+        if member not in self.__balances:
+            raise KeyError(f"{member} is not part of group {self}")
+        if self.__balances[member] != 0:
+            raise ValueError(f"{member} is not settled")
+        del self.__balances[member]
+
+    # clears all information from group
+    def clear (self) -> None:
+        self.__balances.clear()
+        self.__ledger.clear()

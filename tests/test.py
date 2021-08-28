@@ -82,3 +82,26 @@ def test_has_member():
     group = Group(['joe'])
     assert group.has_member('joe')
     assert not group.has_member("john")
+
+def test_remove_settled_member():
+    member1, member2 = "Arthur", "Sadie"
+    group1 = Group([member1])
+
+    # non-existent member
+    with pytest.raises(KeyError):
+        group1.remove_settled_member(member2)
+
+    # successful removal of settled member
+    group1.remove_settled_member(member1)
+    assert group1.get_balances().__len__() == 0
+
+    # TODO: member yet to settle
+    # with pytest.raises(ValueError):
+        # group1.remove_settled_member(<>)
+
+def test_clear():
+    member1, member2 = "Micah", "Javier"
+    group1 = Group([member1, member2])
+    group1.clear()
+    assert group1.get_balances().__len__() == 0
+    assert not group1.get_ledger()
