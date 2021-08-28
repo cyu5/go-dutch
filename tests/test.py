@@ -105,3 +105,17 @@ def test_clear():
     group1.clear()
     assert group1.get_balances().__len__() == 0
     assert not group1.get_ledger()
+
+def test_special_methods():
+
+    group = Group(["joe", "john", "mike"])
+    
+    # contains
+    assert "joe" in group
+    assert "jose" not in group
+    
+    # len
+    assert len(group) == 3 
+    
+    # iter
+    assert list(group) == group.get_members()

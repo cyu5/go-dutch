@@ -1,5 +1,9 @@
 # Group class
-class Group():
+import collections
+from typing import Iterator
+
+
+class Group(collections.abc.Collection):
 
     # constructor
     def __init__(self, members=None) -> None:
@@ -72,3 +76,15 @@ class Group():
     def clear (self) -> None:
         self.__balances.clear()
         self.__ledger.clear()
+    
+    def __len__(self) -> int:
+        return self.__balances.__len__()
+    
+    def __iter__(self) -> Iterator:
+        return self.__balances.__iter__()
+
+    def __contains__(self, member: str) -> bool:
+        return self.__balances.__contains__(member)
+
+
+
