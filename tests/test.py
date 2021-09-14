@@ -119,3 +119,45 @@ def test_special_methods():
     
     # iter
     assert list(group) == group.get_members()
+
+def test_add_transaction():
+
+    group = Group(["joe", "john", "mike"])
+
+    # invalid payer
+    with pytest.raises(ValueError):
+        group.add_transaction("x", ["joe"], 1)
+
+    # invalid payee
+    with pytest.raises(ValueError):
+        group.add_transaction("joe", ["x"], 1)
+
+    # invalid amount
+    with pytest.raises(ValueError):
+        group.add_transaction("mike", ["joe"], -1)
+
+    # invalid weight
+    with pytest.raises(ValueError):
+        group.add_transaction("mike", ["joe", "john"], 1, [2, -8])
+    with pytest.raises(ValueError):
+        group.add_transaction("mike", ["joe", "john"], 1, [2])
+
+    # no weight transaction
+    group.add_transaction("mike", ["joe", "john"], 2)
+    assert group.get_balance("mike") == 2
+    assert group.get_balance("joe") == group.get_balance("john") == -1
+    ledger = group.get_ledger()
+    assert ledger.__len__() == 1
+    transaction = ledger[0]
+    assert transaction == ("mike", ["joe", "john"], 2, None)
+    assert transaction.payer == "mike"
+    assert transaction.payees == ["joe", "john"]
+    assert transaction.amount == 2
+    assert transaction.weights == None
+
+    # weighted transaction
+    group.add_transaction("mike", ["joe", "john", "mike"], 4, [1, 1, 2])
+    assert group.get_balance("mike") == 4
+    assert group.get_balance("joe") == group.get_balance("john") == -2
+    assert group.get_ledger().__len__() == 2
+    

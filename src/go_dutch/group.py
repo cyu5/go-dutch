@@ -1,6 +1,6 @@
 # Group class
 import collections
-from typing import Iterator
+from typing import Iterator, List
 
 
 class Group(collections.abc.Collection):
@@ -59,10 +59,10 @@ class Group(collections.abc.Collection):
         return member in self.__balances
 
     def get_ledger(self) -> list:
-        return self.__ledger
+        return self.__ledger.copy()
 
     def get_balances (self) -> dict:
-        return self.__balances
+        return self.__balances.copy()
 
     # remove a single member from the group only if the member is settled
     def remove_settled_member (self, member: str) -> None:
@@ -77,6 +77,34 @@ class Group(collections.abc.Collection):
         self.__balances.clear()
         self.__ledger.clear()
     
+    def add_transaction(self, payer: str, payees: List[str], amount: float, weights: List[int]=None):
+        if payer not in self.__balances:
+            raise ValueError(f"{payer} is not in group")
+        for payee in payees:
+            if payee not in self.__balances:
+                raise ValueError(f"{payee} is not in group")
+        if amount <= 0:
+            raise ValueError(f"{amount} has to be greater than 0")
+
+        if weights is None:
+            self.__balances[payer] += amount
+            split_amount = amount/len(payees)
+            for payee in payees:
+                self.__balances[payee] -= split_amount
+        else:
+            if len(weights) != len(payees):
+                raise ValueError("payees and weights have different lengths")
+            if any(w <= 0 for w in weights):
+                raise ValueError("all weights have to be greater than 0")
+            self.__balances[payer] += amount
+            quantum = amount / sum(weights)
+            for payee, weight in zip(payees, weights):
+                self.__balances[payee] -= weight * quantum
+
+        Transaction = collections.namedtuple("Transaction", "payer payees amount weights")
+        transaction = Transaction(payer, payees, amount, weights)
+        self.__ledger.append(transaction)
+
     def __len__(self) -> int:
         return self.__balances.__len__()
     
