@@ -1,4 +1,5 @@
 import pytest
+import collections
 
 import sys
 sys.path.append("../")
@@ -86,18 +87,21 @@ def test_has_member():
 def test_remove_settled_member():
     member1, member2 = "Arthur", "Sadie"
     group1 = Group([member1])
-
-    # non-existent member
-    with pytest.raises(KeyError):
-        group1.remove_settled_member(member2)
+    group2 = Group([member1, member2])
 
     # successful removal of settled member
     group1.remove_settled_member(member1)
     assert group1.get_balances().__len__() == 0
 
-    # TODO: member yet to settle
-    # with pytest.raises(ValueError):
-        # group1.remove_settled_member(<>)
+    # non-existent member
+    with pytest.raises(KeyError):
+        group1.remove_settled_member(member2)
+
+     # member yet to settle
+    group2.add_transaction("Arthur", ["Arthur", "Sadie"], 10)
+    with pytest.raises(ValueError):
+        group2.remove_settled_member("Sadie")
+
 
 def test_clear():
     member1, member2 = "Micah", "Javier"
@@ -160,4 +164,30 @@ def test_add_transaction():
     assert group.get_balance("mike") == 4
     assert group.get_balance("joe") == group.get_balance("john") == -2
     assert group.get_ledger().__len__() == 2
-    
+
+
+def test_show_settle ():
+    group = Group(["A", "B", "C", "D"])
+    group.add_transaction("A", ["B", "C"], 10)
+    group.add_transaction("D", ["C", "D"], 14, [2, 5])
+
+    Payment = collections.namedtuple("Payment", "payer payee amount")
+    transactions = [
+        Payment("C", "A", 9),
+        Payment("B", "D", 4),
+        Payment("B", "A", 1)
+    ]
+    assert group.show_settle() == transactions
+
+def test_settle ():
+    group = Group(["A", "B", "C"])
+    group.add_transaction("A", ["B", "C"], 4)
+    group.settle()
+
+    assert not any(group.get_balances().values())
+    assert group.get_ledger().__len__() == 3
+
+    # settling settled group changes nothing
+    group.settle()
+    assert not any(group.get_balances().values())
+    assert group.get_ledger().__len__() == 3

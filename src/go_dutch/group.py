@@ -1,5 +1,6 @@
 # Group class
 import collections
+from heapq import heappop, heappush
 from typing import Iterator, List
 
 
@@ -105,6 +106,44 @@ class Group(collections.abc.Collection):
         transaction = Transaction(payer, payees, amount, weights)
         self.__ledger.append(transaction)
 
+
+    # return minimum transaction path to settle up all members
+    def show_settle (self) -> List[collections.namedtuple]:
+
+        negatives, positives = [], []
+        transactions = []
+        Payment = collections.namedtuple("Payment", "payer payee amount")
+
+        for m, b in self.__balances.items():
+            if b > 0:
+                heappush(positives, (-b, m))
+            elif b < 0:
+                heappush(negatives, (b, m))
+
+        while negatives:
+            payee_amount, payee = heappop(positives)
+            payer_amount, payer = heappop(negatives)
+            remains = payer_amount - payee_amount
+            amount = min(abs(payee_amount), abs(payer_amount))
+            if remains > 0:
+                heappush(positives, (-remains, payee))
+            elif remains < 0:
+                heappush(negatives, (remains, payer))
+
+            transactions.append(Payment(payer, payee, amount))
+
+        return transactions
+
+    # settle up all members
+    def settle (self):
+        transactions = self.show_settle()
+        Transaction = collections.namedtuple("Transaction", "payer payees amount weights")
+        for t in transactions:
+            self.__ledger.append( Transaction(t.payer, [t.payee], t.amount, None) )
+        for member in self.get_members():
+            self.__balances[member] = 0
+
+
     def __len__(self) -> int:
         return self.__balances.__len__()
     
@@ -113,6 +152,3 @@ class Group(collections.abc.Collection):
 
     def __contains__(self, member: str) -> bool:
         return self.__balances.__contains__(member)
-
-
-
