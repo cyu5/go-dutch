@@ -1,7 +1,8 @@
 # Group class
 import collections
 from heapq import heappop, heappush
-from typing import Iterator, List
+from typing import Iterator, List, Set
+from itertools import chain, combinations, islice
 
 
 class Group(collections.abc.Collection):
@@ -23,6 +24,8 @@ class Group(collections.abc.Collection):
                 raise TypeError('input should be an iterable, not a string')
             
         self.__ledger = list()
+        self.__Transaction = collections.namedtuple("Transaction", "payer payees amount weights")
+        self.__Payment = collections.namedtuple("Payment", "payer payee amount")
 
     def extend_members(self, new_members) -> None:
         if not isinstance(new_members, str):
@@ -102,19 +105,20 @@ class Group(collections.abc.Collection):
             for payee, weight in zip(payees, weights):
                 self.__balances[payee] -= weight * quantum
 
-        Transaction = collections.namedtuple("Transaction", "payer payees amount weights")
-        transaction = Transaction(payer, payees, amount, weights)
+        
+        transaction = self.__Transaction(payer, payees, amount, weights)
         self.__ledger.append(transaction)
 
 
     # return minimum transaction path to settle up all members
-    def show_settle (self) -> List[collections.namedtuple]:
+    def show_settle_min_flow(self) -> List[collections.namedtuple]:
+        return self.__min_flow_helper(self.__balances.items())
 
+    def __min_flow_helper(self, balances) -> List[collections.namedtuple]:
         negatives, positives = [], []
         transactions = []
-        Payment = collections.namedtuple("Payment", "payer payee amount")
 
-        for m, b in self.__balances.items():
+        for m, b in balances:
             if b > 0:
                 heappush(positives, (-b, m))
             elif b < 0:
@@ -130,19 +134,71 @@ class Group(collections.abc.Collection):
             elif remains < 0:
                 heappush(negatives, (remains, payer))
 
-            transactions.append(Payment(payer, payee, amount))
+            transactions.append(self.__Payment(payer, payee, amount))
 
         return transactions
+        
 
     # settle up all members
-    def settle (self):
-        transactions = self.show_settle()
-        Transaction = collections.namedtuple("Transaction", "payer payees amount weights")
+    def settle_min_flow (self):
+        transactions = self.show_settle_min_flow()
         for t in transactions:
-            self.__ledger.append( Transaction(t.payer, [t.payee], t.amount, None) )
+            self.__ledger.append( self.__Transaction(t.payer, [t.payee], t.amount, None) )
         for member in self.get_members():
             self.__balances[member] = 0
 
+    def show_settle_min_transactions(self) -> List[collections.namedtuple]:
+        def powerset(iterable):
+            "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+            s = list(iterable)
+            return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+
+        def best_partition(subset: List[Set[tuple]]) -> List[Set[tuple]]:
+            if not subset:
+                return []
+            else:
+                solutions = []
+                for s in subset:
+                    if sum(balance for _, balance in s) == 0:
+                        new_subset = list(ns for ns in subset if not (ns & s))
+                        solutions.append(best_partition(new_subset) + [s])
+                return max(solutions, key=len)
+
+        balances = [(n, b) for n, b in self.__balances.items() if b != 0]
+        seen = {}
+        pairs = []
+        paired = set()
+        for name, b in balances:
+            if -b in seen:
+                pairs.append((name, seen[-b]))
+                paired.add(name)
+                paired.add(seen[-b])
+                del seen[-b]
+            else:
+                seen[b] = name
+        
+        
+        transactions = []
+        for p in pairs:
+            payer, payee = sorted(p, key=self.get_balance)
+            amount = self.get_balance(payee)
+            tran = self.__Payment(payer, payee, amount)
+            transactions.append(tran)
+
+        balances = list((name, b) for name, b in balances if name not in paired)
+        subset = list(map(set, islice(powerset(balances), 1, None)))
+        partition = best_partition(subset)
+        for members_set in partition:
+            transactions += self.__min_flow_helper(members_set)
+        
+        return transactions
+
+    def settle_min_transactions(self):
+        transactions = self.show_settle_min_transactions()
+        for t in transactions:
+            self.__ledger.append( self.__Transaction(t.payer, [t.payee], t.amount, None) )
+        for member in self.get_members():
+            self.__balances[member] = 0
 
     def __len__(self) -> int:
         return self.__balances.__len__()
@@ -152,3 +208,9 @@ class Group(collections.abc.Collection):
 
     def __contains__(self, member: str) -> bool:
         return self.__balances.__contains__(member)
+
+
+
+
+    
+    

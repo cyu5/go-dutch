@@ -166,28 +166,58 @@ def test_add_transaction():
     assert group.get_ledger().__len__() == 2
 
 
-def test_show_settle ():
+def test_show_settle_min_flow ():
     group = Group(["A", "B", "C", "D"])
     group.add_transaction("A", ["B", "C"], 10)
     group.add_transaction("D", ["C", "D"], 14, [2, 5])
 
-    Payment = collections.namedtuple("Payment", "payer payee amount")
+    Payment = group._Group__Payment
     transactions = [
         Payment("C", "A", 9),
         Payment("B", "D", 4),
         Payment("B", "A", 1)
     ]
-    assert group.show_settle() == transactions
+    assert group.show_settle_min_flow() == transactions
 
-def test_settle ():
+def test_settle_min_flow ():
     group = Group(["A", "B", "C"])
     group.add_transaction("A", ["B", "C"], 4)
-    group.settle()
+    group.settle_min_flow()
 
     assert not any(group.get_balances().values())
     assert group.get_ledger().__len__() == 3
 
     # settling settled group changes nothing
-    group.settle()
+    group.settle_min_flow()
     assert not any(group.get_balances().values())
     assert group.get_ledger().__len__() == 3
+
+def test_show_settle_min_transactions ():
+    group = Group(["A", "B", "C", "D", "E", "F"])
+    group.add_transaction("A", ["E"], 2)
+    group.add_transaction("D", ["F", "B"], 7, [2, 5])
+    group.add_transaction("C", ["D"], 3)
+
+    Payment = group._Group__Payment
+    transactions = [
+        Payment(payer='E', payee='A', amount=2), 
+        Payment(payer='B', payee='D', amount=4.0),
+        Payment(payer='F', payee='C', amount=2.0), 
+        Payment(payer='B', payee='C', amount=1.0)
+    ]
+    assert group.show_settle_min_transactions() == transactions
+
+def test_settle_min_transactions():
+    group = Group(["A", "B", "C", "D", "E", "F"])
+    group.add_transaction("A", ["E"], 2)
+    group.add_transaction("D", ["F", "B"], 7, [2, 5])
+    group.add_transaction("C", ["D"], 3)
+    group.settle_min_transactions()
+
+    assert not any(group.get_balances().values())
+    assert group.get_ledger().__len__() == 7
+
+    # settling settled group changes nothing
+    group.settle_min_transactions()
+    assert not any(group.get_balances().values())
+    assert group.get_ledger().__len__() == 7
