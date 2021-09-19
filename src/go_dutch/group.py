@@ -1,38 +1,43 @@
-# Group class
+# import libaries
 import collections
 from heapq import heappop, heappush
-from typing import Iterator, List, Set
+from typing import Iterable, Iterator, List, Set, NamedTuple
 from itertools import chain, combinations, islice
 
-
+# Group class, inheriting collections
 class Group(collections.abc.Collection):
 
     # constructor
-    def __init__(self, members=None) -> None:
+    def __init__(self, members:Iterable[str]=None) -> None:
+
+        # keys -> member, values -> net balance
         self.__balances = dict()
+
+        # input validation
         if members is not None:
             # add members to group
             if not isinstance(members, str):
                 for member in members:
-
-                    # input validation
                     if not isinstance(member, str):
                         raise TypeError(f'{member} is not a str')
                     else:
-                        self.__balances[member] = 0
+                        self.__balances[member] = 0.0
             else:
                 raise TypeError('input should be an iterable, not a string')
             
+        # ledger of transactions occurred until now
         self.__ledger = list()
         self.__Transaction = collections.namedtuple("Transaction", "payer payees amount weights")
+        # format for ways to settle payments
         self.__Payment = collections.namedtuple("Payment", "payer payee amount")
 
-    def extend_members(self, new_members) -> None:
+
+    # add multiple memebers to the group
+    def extend_members(self, new_members:Iterable[str]) -> None:
+        # input validation
         if not isinstance(new_members, str):
             tmp = dict()
             for member in new_members:
-
-                # input validation
                 if not isinstance(member, str):
                     raise TypeError(f'{member} is not a str')
                 elif member not in self.__balances:
@@ -44,29 +49,31 @@ class Group(collections.abc.Collection):
         
     # add a single member to the group
     def add_member (self, member: str) -> None:
-
         if isinstance(member, str):
             self.__balances.setdefault(member, 0)
         else:
             raise TypeError('Single string argument required for input')
     
+
+    ############################ getters ############################
+
     def get_members (self) -> list:
         return list(self.__balances.keys())
 
-    def get_balance (self, member: str) -> int:
+    def get_balance (self, member: str) -> float:
         try:
             return self.__balances[member]
         except KeyError:
             raise KeyError(f"{member} is not part of group {self}")
-
-    def has_member (self, member: str) -> int:
-        return member in self.__balances
 
     def get_ledger(self) -> list:
         return self.__ledger.copy()
 
     def get_balances (self) -> dict:
         return self.__balances.copy()
+
+    ###################################################################
+
 
     # remove a single member from the group only if the member is settled
     def remove_settled_member (self, member: str) -> None:
@@ -76,11 +83,8 @@ class Group(collections.abc.Collection):
             raise ValueError(f"{member} is not settled")
         del self.__balances[member]
 
-    # clears all information from group
-    def clear (self) -> None:
-        self.__balances.clear()
-        self.__ledger.clear()
     
+    # add a single transaction to the ledger and update balances accordingly
     def add_transaction(self, payer: str, payees: List[str], amount: float, weights: List[int]=None):
         if payer not in self.__balances:
             raise ValueError(f"{payer} is not in group")
@@ -105,19 +109,20 @@ class Group(collections.abc.Collection):
             for payee, weight in zip(payees, weights):
                 self.__balances[payee] -= weight * quantum
 
-        
         transaction = self.__Transaction(payer, payees, amount, weights)
         self.__ledger.append(transaction)
 
 
-    # return minimum transaction path to settle up all members
-    def show_settle_min_flow(self) -> List[collections.namedtuple]:
+    # return payments for minimum cash flow to settle the group
+    def show_settle_min_flow(self) -> List[NamedTuple]:
         return self.__min_flow_helper(self.__balances.items())
 
-    def __min_flow_helper(self, balances) -> List[collections.namedtuple]:
+    # minimum cash flow calculation
+    def __min_flow_helper(self, balances:Iterable[tuple]) -> List[NamedTuple]:
         negatives, positives = [], []
         transactions = []
 
+        # ignoring settled members (balence == 0)
         for m, b in balances:
             if b > 0:
                 heappush(positives, (-b, m))
@@ -139,7 +144,7 @@ class Group(collections.abc.Collection):
         return transactions
         
 
-    # settle up all members
+    # settle up all members by minimum cash flow and update the ledger accordingly
     def settle_min_flow (self):
         transactions = self.show_settle_min_flow()
         for t in transactions:
@@ -147,12 +152,15 @@ class Group(collections.abc.Collection):
         for member in self.get_members():
             self.__balances[member] = 0
 
-    def show_settle_min_transactions(self) -> List[collections.namedtuple]:
-        def powerset(iterable):
-            "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+
+    # return payments for minimum transactions to settle the group
+    def show_settle_min_transactions(self) -> List[NamedTuple]:
+        # powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
+        def powerset(iterable) -> Iterable[tuple]:
             s = list(iterable)
             return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
+        # zero-sum set packing
         def best_partition(subset: List[Set[tuple]]) -> List[Set[tuple]]:
             if not subset:
                 return []
@@ -164,6 +172,7 @@ class Group(collections.abc.Collection):
                         solutions.append(best_partition(new_subset) + [s])
                 return max(solutions, key=len)
 
+        # removing 0 balances and equal magnitude +ve/-ve pairs
         balances = [(n, b) for n, b in self.__balances.items() if b != 0]
         seen = {}
         pairs = []
@@ -193,6 +202,8 @@ class Group(collections.abc.Collection):
         
         return transactions
 
+
+    # settle up all members by minimum transactions and update the ledger accordingly
     def settle_min_transactions(self):
         transactions = self.show_settle_min_transactions()
         for t in transactions:
@@ -200,6 +211,19 @@ class Group(collections.abc.Collection):
         for member in self.get_members():
             self.__balances[member] = 0
 
+
+    # clears all information from group
+    def clear (self) -> None:
+        self.__balances.clear()
+        self.__ledger.clear()
+
+        
+    # check for existence of a member in the group
+    def has_member (self, member: str) -> bool:
+        return member in self.__balances
+
+
+    # implementing collections' methods
     def __len__(self) -> int:
         return self.__balances.__len__()
     
@@ -208,9 +232,3 @@ class Group(collections.abc.Collection):
 
     def __contains__(self, member: str) -> bool:
         return self.__balances.__contains__(member)
-
-
-
-
-    
-    

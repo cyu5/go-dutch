@@ -3,10 +3,9 @@ import collections
 
 import sys
 sys.path.append("../")
-
 from src.go_dutch.group import Group
 
-# test Group class init
+
 def test_group_init_validation():
     with pytest.raises(TypeError):
         Group(1)
@@ -26,7 +25,6 @@ def test_group_init_members():
 
     # check unique members
     assert Group(["john", "john"]).get_members().__len__() == 1
-
 
 def test_add_member ():
 
@@ -51,7 +49,6 @@ def test_add_member ():
     with pytest.raises(TypeError):
         group1.add_member ([member1])
 
-        
 def test_extend_members():
     group = Group()
     
@@ -101,7 +98,6 @@ def test_remove_settled_member():
     group2.add_transaction("Arthur", ["Arthur", "Sadie"], 10)
     with pytest.raises(ValueError):
         group2.remove_settled_member("Sadie")
-
 
 def test_clear():
     member1, member2 = "Micah", "Javier"
@@ -164,7 +160,6 @@ def test_add_transaction():
     assert group.get_balance("mike") == 4
     assert group.get_balance("joe") == group.get_balance("john") == -2
     assert group.get_ledger().__len__() == 2
-
 
 def test_show_settle_min_flow ():
     group = Group(["A", "B", "C", "D"])
