@@ -14,10 +14,21 @@
 
 Have you ever been in a situation where you hit your head against the wall trying to split your bill with friends after a dinnner at a diner? Well, no worries. The go-dutch library written in Python3 has the sole purpose to make that task easier. It will tell you what payments should be made in a group of people in order to settle debts conveniently.
 
+You can view this PyPi package [here](https://pypi.org/project/go-dutch).
 
 ## Installation
-
+First, make sure you have [pip](https://pip.pypa.io/en/stable/installation/) installed, then run the following in your terminal
+```
+pip install go-dutch
+```
 ## Usage
+The go_dutch library has all of its functionality inside of the Group class. Use the Group class like the example below.
+
+```python
+from go_dutch import Group
+group = Group(["A", "B"])
+
+```
 
 ## Group Class
 
